@@ -5,6 +5,7 @@ import (
 	"tweedisc-go/config"
 	"tweedisc-go/database"
 	"tweedisc-go/embed"
+	"tweedisc-go/ratelimiter"
 	"tweedisc-go/twitter"
 
 	"github.com/bwmarrin/discordgo"
@@ -19,6 +20,16 @@ var validReactions = map[string]string{
 	"💙":  "like1",
 	"🔁":  "retweet0",
 	"🔄":  "retweet1",
+}
+
+var likeLimiter = ratelimiter.RateLimiter{
+	Period:   config.Period,
+	MaxCalls: config.LikeLimit,
+}
+
+var retweetLimiter = ratelimiter.RateLimiter{
+	Period:   config.Period,
+	MaxCalls: config.RetweetLimit,
 }
 
 func Start() {
@@ -120,6 +131,7 @@ func reactionAddHandler(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
 			return
 		}
 		if strings.HasPrefix(action, "like") {
+			// if retweetLimiter.CheckLimit()
 			err := twitter.LikeTweet(tweetLinks[index], r.UserID)
 			if err != nil {
 				sendAuthLink(s, r.UserID, r.GuildID)

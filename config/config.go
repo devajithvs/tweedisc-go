@@ -25,6 +25,9 @@ var (
 	AccessToken           string
 	Port                  string
 	DatabasePrefix        string
+	LikeLimit             int
+	RetweetLimit          int
+	Period                int
 )
 
 func init() {
@@ -51,4 +54,7 @@ func init() {
 	AccessToken = os.Getenv("ACCESS_TOKEN")
 	Port = os.Getenv("PORT")
 	DatabasePrefix = "v2_"
+	LikeLimit = 45
+	RetweetLimit = 45
+	Period = 15 * 60
 }
