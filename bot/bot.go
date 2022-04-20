@@ -3,6 +3,7 @@ package bot
 import (
 	"strings"
 	"tweedisc-go/config"
+	"tweedisc-go/database"
 	"tweedisc-go/embed"
 	"tweedisc-go/twitter"
 
@@ -54,6 +55,38 @@ func sendTweetMessage(s *discordgo.Session, userID string, title string, tweetLi
 	embedMessage := embed.NewEmbed().SetTitle(title).SetDescription(tweetLink)
 	author := twitter.GetTweetAuthor(tweetLink)
 	embedMessage.SetAuthor(author, tweetLink)
+	embedMessage.SetColor(8808703)
+	channel, err := s.UserChannelCreate(userID)
+	if err != nil {
+		return err
+	}
+	s.ChannelMessageSendEmbed(channel.ID, embedMessage.MessageEmbed)
+	return nil
+}
+
+func sendAuthLink(s *discordgo.Session, userID string, guildID string) error {
+	server, err := database.GetServer(guildID)
+	var loginURL string
+	if err != nil {
+		loginURL = config.GumroadURI
+	} else {
+		loginURL = server.Gumroad_url
+	}
+	log.Println(loginURL, err)
+	embedMessage := embed.NewEmbed().SetTitle("⛔ You have not enabled Tweedisc feature").SetDescription("Please click __**[HERE](" + loginURL + ")**__ to enable Tweedisc feature (engaging with tweets directly from Discord).")
+	embedMessage.SetColor(8808703)
+	channel, err := s.UserChannelCreate(userID)
+	if err != nil {
+		return err
+	}
+	s.ChannelMessageSendEmbed(channel.ID, embedMessage.MessageEmbed)
+	return nil
+}
+
+func sendErrorMessage(s *discordgo.Session, userID string, title string) error {
+	embedMessage := embed.NewEmbed().SetTitle("⛔ " + title)
+	embedMessage.SetColor(8808703)
+
 	channel, err := s.UserChannelCreate(userID)
 	if err != nil {
 		return err
@@ -82,13 +115,26 @@ func reactionAddHandler(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
 	}
 	if twitter.IsTweet(m.Content) {
 		tweetLinks := twitter.GetTweetLinks(m.Content)
-		index := action[len(action)-1] - '0'
+		index := int(action[len(action)-1] - '0')
+		if index >= len(tweetLinks) {
+			return
+		}
 		if strings.HasPrefix(action, "like") {
-			twitter.LikeTweet(tweetLinks[index], r.UserID)
+			err := twitter.LikeTweet(tweetLinks[index], r.UserID)
+			if err != nil {
+				sendAuthLink(s, r.UserID, r.GuildID)
+				return
+			}
 			sendTweetMessage(s, r.UserID, "✅ Successfully liked", tweetLinks[index])
+
 		} else if strings.HasPrefix(action, "retweet") {
-			// RetweetTweet(m.Content)
+			err := twitter.RetweetTweet(tweetLinks[index], r.UserID)
+			if err != nil {
+				sendAuthLink(s, r.UserID, r.GuildID)
+				return
+			}
 			sendTweetMessage(s, r.UserID, "✅ Successfully retweeted", tweetLinks[index])
+
 		}
 	}
 }
@@ -113,12 +159,24 @@ func reactionRemoveHandler(s *discordgo.Session, r *discordgo.MessageReactionRem
 	}
 	if twitter.IsTweet(m.Content) {
 		tweetLinks := twitter.GetTweetLinks(m.Content)
-		index := action[len(action)-1] - '0'
+		index := int(action[len(action)-1] - '0')
+		if index >= len(tweetLinks) {
+			return
+		}
 		if strings.HasPrefix(action, "like") {
-			twitter.UnlikeTweet(tweetLinks[index], r.UserID)
+			err := twitter.UnlikeTweet(tweetLinks[index], r.UserID)
+			if err != nil {
+				sendAuthLink(s, r.UserID, r.GuildID)
+				return
+			}
 			sendTweetMessage(s, r.UserID, "✅ Successfully unliked", tweetLinks[index])
+
 		} else if strings.HasPrefix(action, "retweet") {
-			// unretweetTweet(m.Content)
+			err := twitter.UnRetweetTweet(tweetLinks[index], r.UserID)
+			if err != nil {
+				sendAuthLink(s, r.UserID, r.GuildID)
+				return
+			}
 			sendTweetMessage(s, r.UserID, "✅ Successfully unretweeted", tweetLinks[index])
 		}
 	}

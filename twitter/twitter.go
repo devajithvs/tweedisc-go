@@ -11,6 +11,9 @@ import (
 	"github.com/michimani/gotwi"
 	"github.com/michimani/gotwi/tweet/like"
 	"github.com/michimani/gotwi/tweet/like/types"
+
+	"github.com/michimani/gotwi/tweet/retweet"
+	retweetTypes "github.com/michimani/gotwi/tweet/retweet/types"
 )
 
 var log = config.Log
@@ -117,6 +120,66 @@ func UnlikeTweet(tweetLink string, discordUserID string) error {
 	}
 
 	res, err := like.Delete(context.Background(), c, p)
+	if err != nil {
+		log.Warn(err)
+		return err
+	}
+	log.Println("Result: ", res)
+
+	return nil
+}
+
+func RetweetTweet(tweetLink string, discordUserID string) error {
+
+	user, err := database.GetUser(discordUserID)
+	if err != nil {
+		log.Warn(err)
+		return err
+	}
+
+	c, err := newOAuth1Client(user)
+	if err != nil {
+		log.Warn(err)
+		return err
+	}
+
+	tweetID := GetTweetID(tweetLink)
+	p := &retweetTypes.CreateInput{
+		ID:      *gotwi.String(fmt.Sprint(user.Twitter_user_id)),
+		TweetID: *gotwi.String(tweetID),
+	}
+
+	res, err := retweet.Create(context.Background(), c, p)
+	if err != nil {
+		log.Warn(err)
+		return err
+	}
+	log.Println("Result: ", res)
+
+	return nil
+}
+
+func UnRetweetTweet(tweetLink string, discordUserID string) error {
+
+	user, err := database.GetUser(discordUserID)
+	if err != nil {
+		log.Warn(err)
+		return err
+	}
+
+	c, err := newOAuth1Client(user)
+	if err != nil {
+		log.Warn(err)
+		return err
+	}
+
+	tweetID := GetTweetID(tweetLink)
+	p := &retweetTypes.DeleteInput{
+		ID:            *gotwi.String(fmt.Sprint(user.Twitter_user_id)),
+		SourceTweetID: *gotwi.String(tweetID),
+	}
+
+	res, err := retweet.Delete(context.Background(), c, p)
 	if err != nil {
 		log.Warn(err)
 		return err

@@ -33,10 +33,10 @@ func init() {
 }
 
 type Server struct {
-	guild_id           int
-	guild_name         string
-	gumroad_url        string
-	updated_time_stamp int
+	Guild_id           int
+	Guild_name         string
+	Gumroad_url        string
+	Updated_time_stamp int
 }
 
 func GetServer(guildID string) (Server, error) {
