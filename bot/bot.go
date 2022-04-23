@@ -60,6 +60,35 @@ func Start() {
 		return
 	}
 	log.Println("Bot is running !")
+	addReactionToExistingMessages(goBot)
+
+}
+
+func addReactionToExistingMessages(s *discordgo.Session) {
+	for _, guild := range s.State.Guilds {
+		channels, _ := s.GuildChannels(guild.ID)
+
+		for _, c := range channels {
+			if c.Type != discordgo.ChannelTypeGuildText {
+				continue
+			}
+
+			messages, err := s.ChannelMessages(c.ID, 20, "", "", "")
+			if err != nil {
+				continue
+			}
+
+			for _, m := range messages {
+
+				if twitter.IsTweet(m.Content) && len(m.Reactions) == 0 {
+					messageReaction(s, m)
+				} else {
+					break
+				}
+			}
+
+		}
+	}
 }
 
 func sendTweetMessage(s *discordgo.Session, userID string, title string, tweetLink string) error {
@@ -128,29 +157,29 @@ func reactionAddHandler(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
 
 	if twitter.IsTweet(m.Content) {
 		user, err := database.GetUser(r.UserID)
-		if err != nil {
+		if err != nil || user.Created_time_stamp == 0 {
 			log.Warn(err)
 			s.MessageReactionRemove(r.ChannelID, r.MessageID, r.Emoji.Name, r.UserID)
-			sendAuthLink(s, r.UserID, r.GuildID)
+			// sendAuthLink(s, r.UserID, r.GuildID)
 			return
 		}
 		tweetLinks := twitter.GetTweetLinks(m.Content)
 		index := int(action[len(action)-1] - '0')
 		if index >= len(tweetLinks) {
 			s.MessageReactionRemove(r.ChannelID, r.MessageID, r.Emoji.Name, r.UserID)
-			sendErrorMessage(s, r.UserID, "Invalid Tweet")
+			// sendErrorMessage(s, r.UserID, "Invalid Tweet")
 			return
 		}
 		if strings.HasPrefix(action, "like") {
 			if likeLimiter.CheckLimit(user.Twitter_user_id, "like") {
 				s.MessageReactionRemove(r.ChannelID, r.MessageID, r.Emoji.Name, r.UserID)
-				sendErrorMessage(s, r.UserID, "You have reached the maximum number of requests for likes per 15 minutes. Please try after some time.")
+				// sendErrorMessage(s, r.UserID, "You have reached the maximum number of requests for likes per 15 minutes. Please try after some time.")
 				return
 			}
 			err := twitter.LikeTweet(tweetLinks[index], user)
 			if err != nil {
 				s.MessageReactionRemove(r.ChannelID, r.MessageID, r.Emoji.Name, r.UserID)
-				sendErrorMessage(s, r.UserID, "Error. Please try after some time")
+				// sendErrorMessage(s, r.UserID, "Error. Please try after some time")
 				return
 			}
 			sendTweetMessage(s, r.UserID, "✅ Successfully liked", tweetLinks[index])
@@ -158,13 +187,13 @@ func reactionAddHandler(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
 		} else if strings.HasPrefix(action, "retweet") {
 			if retweetLimiter.CheckLimit(user.Twitter_user_id, "retweet") {
 				s.MessageReactionRemove(r.ChannelID, r.MessageID, r.Emoji.Name, r.UserID)
-				sendErrorMessage(s, r.UserID, "You have reached the maximum number of requests for retweets per 15 minutes. Please try after some time.")
+				// sendErrorMessage(s, r.UserID, "You have reached the maximum number of requests for retweets per 15 minutes. Please try after some time.")
 				return
 			}
 			err := twitter.RetweetTweet(tweetLinks[index], user)
 			if err != nil {
 				s.MessageReactionRemove(r.ChannelID, r.MessageID, r.Emoji.Name, r.UserID)
-				sendErrorMessage(s, r.UserID, "Error. Please try after some time")
+				// sendErrorMessage(s, r.UserID, "Error. Please try after some time")
 				return
 			}
 			sendTweetMessage(s, r.UserID, "✅ Successfully retweeted", tweetLinks[index])
@@ -194,7 +223,7 @@ func reactionRemoveHandler(s *discordgo.Session, r *discordgo.MessageReactionRem
 
 	if twitter.IsTweet(m.Content) {
 		user, err := database.GetUser(r.UserID)
-		if err != nil {
+		if err != nil || user.Created_time_stamp == 0 {
 			log.Warn(err)
 			sendAuthLink(s, r.UserID, r.GuildID)
 			return
@@ -248,5 +277,31 @@ func messageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	if m.Content == "ping" {
 		_, _ = s.ChannelMessageSend(m.ChannelID, "pong")
+	}
+}
+
+func messageReaction(s *discordgo.Session, m *discordgo.Message) {
+	if m.Author.ID == BotId {
+		return
+	}
+	tweetLinks := twitter.GetTweetLinks(m.Content)
+	channel, err := s.Channel(m.ChannelID)
+	if err != nil {
+		return
+	}
+	guild, err := s.State.Guild(channel.GuildID)
+	if err != nil {
+		return
+	}
+	log.Println("Adding reactions to " + m.ID + " in " + guild.Name + " in channel " + channel.Name)
+	log.Println(m.Content)
+	if len(tweetLinks) == 1 {
+		s.MessageReactionAdd(m.ChannelID, m.ID, "❤️")
+		s.MessageReactionAdd(m.ChannelID, m.ID, "🔁")
+	} else if len(tweetLinks) > 1 {
+		s.MessageReactionAdd(m.ChannelID, m.ID, "❤️")
+		s.MessageReactionAdd(m.ChannelID, m.ID, "🔁")
+		s.MessageReactionAdd(m.ChannelID, m.ID, "💙")
+		s.MessageReactionAdd(m.ChannelID, m.ID, "🔄")
 	}
 }
