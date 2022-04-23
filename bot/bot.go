@@ -115,6 +115,7 @@ func reactionAddHandler(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
 	log.Println("Add reaction: ", m.Author.Username)
 
 	if err != nil {
+		s.MessageReactionRemove(r.ChannelID, r.MessageID, r.Emoji.Name, r.UserID)
 		log.Error("Error getting message: ", err)
 		return
 	}
@@ -124,25 +125,46 @@ func reactionAddHandler(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
 		log.Warn("Action doesn't exist: ", r.Emoji.Name)
 		return
 	}
+
 	if twitter.IsTweet(m.Content) {
+		user, err := database.GetUser(r.UserID)
+		if err != nil {
+			log.Warn(err)
+			s.MessageReactionRemove(r.ChannelID, r.MessageID, r.Emoji.Name, r.UserID)
+			sendAuthLink(s, r.UserID, r.GuildID)
+			return
+		}
 		tweetLinks := twitter.GetTweetLinks(m.Content)
 		index := int(action[len(action)-1] - '0')
 		if index >= len(tweetLinks) {
+			s.MessageReactionRemove(r.ChannelID, r.MessageID, r.Emoji.Name, r.UserID)
+			sendErrorMessage(s, r.UserID, "Invalid Tweet")
 			return
 		}
 		if strings.HasPrefix(action, "like") {
-			// if retweetLimiter.CheckLimit()
-			err := twitter.LikeTweet(tweetLinks[index], r.UserID)
+			if likeLimiter.CheckLimit(user.Twitter_user_id, "like") {
+				s.MessageReactionRemove(r.ChannelID, r.MessageID, r.Emoji.Name, r.UserID)
+				sendErrorMessage(s, r.UserID, "You have reached the maximum number of requests for likes per 15 minutes. Please try after some time.")
+				return
+			}
+			err := twitter.LikeTweet(tweetLinks[index], user)
 			if err != nil {
-				sendAuthLink(s, r.UserID, r.GuildID)
+				s.MessageReactionRemove(r.ChannelID, r.MessageID, r.Emoji.Name, r.UserID)
+				sendErrorMessage(s, r.UserID, "Error. Please try after some time")
 				return
 			}
 			sendTweetMessage(s, r.UserID, "✅ Successfully liked", tweetLinks[index])
 
 		} else if strings.HasPrefix(action, "retweet") {
-			err := twitter.RetweetTweet(tweetLinks[index], r.UserID)
+			if retweetLimiter.CheckLimit(user.Twitter_user_id, "retweet") {
+				s.MessageReactionRemove(r.ChannelID, r.MessageID, r.Emoji.Name, r.UserID)
+				sendErrorMessage(s, r.UserID, "You have reached the maximum number of requests for retweets per 15 minutes. Please try after some time.")
+				return
+			}
+			err := twitter.RetweetTweet(tweetLinks[index], user)
 			if err != nil {
-				sendAuthLink(s, r.UserID, r.GuildID)
+				s.MessageReactionRemove(r.ChannelID, r.MessageID, r.Emoji.Name, r.UserID)
+				sendErrorMessage(s, r.UserID, "Error. Please try after some time")
 				return
 			}
 			sendTweetMessage(s, r.UserID, "✅ Successfully retweeted", tweetLinks[index])
@@ -169,24 +191,39 @@ func reactionRemoveHandler(s *discordgo.Session, r *discordgo.MessageReactionRem
 		log.Warn("Action doesn't exist: ", r.Emoji.Name)
 		return
 	}
+
 	if twitter.IsTweet(m.Content) {
+		user, err := database.GetUser(r.UserID)
+		if err != nil {
+			log.Warn(err)
+			sendAuthLink(s, r.UserID, r.GuildID)
+			return
+		}
 		tweetLinks := twitter.GetTweetLinks(m.Content)
 		index := int(action[len(action)-1] - '0')
 		if index >= len(tweetLinks) {
 			return
 		}
 		if strings.HasPrefix(action, "like") {
-			err := twitter.UnlikeTweet(tweetLinks[index], r.UserID)
+			if likeLimiter.CheckLimit(user.Twitter_user_id, "like") {
+				sendErrorMessage(s, r.UserID, "You have reached the maximum number of requests for likes per 15 minutes. Please try after some time.")
+				return
+			}
+			err := twitter.UnlikeTweet(tweetLinks[index], user)
 			if err != nil {
-				sendAuthLink(s, r.UserID, r.GuildID)
+				sendErrorMessage(s, r.UserID, "Error. Please try after some time")
 				return
 			}
 			sendTweetMessage(s, r.UserID, "✅ Successfully unliked", tweetLinks[index])
 
 		} else if strings.HasPrefix(action, "retweet") {
-			err := twitter.UnRetweetTweet(tweetLinks[index], r.UserID)
+			if retweetLimiter.CheckLimit(user.Twitter_user_id, "retweet") {
+				sendErrorMessage(s, r.UserID, "You have reached the maximum number of requests for retweets per 15 minutes. Please try after some time.")
+				return
+			}
+			err := twitter.UnRetweetTweet(tweetLinks[index], user)
 			if err != nil {
-				sendAuthLink(s, r.UserID, r.GuildID)
+				sendErrorMessage(s, r.UserID, "Error. Please try after some time")
 				return
 			}
 			sendTweetMessage(s, r.UserID, "✅ Successfully unretweeted", tweetLinks[index])

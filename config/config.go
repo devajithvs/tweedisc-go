@@ -54,7 +54,7 @@ func init() {
 	AccessToken = os.Getenv("ACCESS_TOKEN")
 	Port = os.Getenv("PORT")
 	DatabasePrefix = "v2_"
-	LikeLimit = 45
-	RetweetLimit = 45
+	LikeLimit = 5
+	RetweetLimit = 5
 	Period = 15 * 60
 }

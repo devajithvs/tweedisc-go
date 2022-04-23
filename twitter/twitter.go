@@ -69,13 +69,13 @@ func newOAuth1Client(user database.User) (*gotwi.Client, error) {
 	return gotwi.NewClient(in)
 }
 
-func LikeTweet(tweetLink string, discordUserID string) error {
+func LikeTweet(tweetLink string, user database.User) error {
 
-	user, err := database.GetUser(discordUserID)
-	if err != nil {
-		log.Warn(err)
-		return err
-	}
+	// user, err := database.GetUser(discordUserID)
+	// if err != nil {
+	// 	log.Warn(err)
+	// 	return err
+	// }
 
 	c, err := newOAuth1Client(user)
 	if err != nil {
@@ -99,13 +99,13 @@ func LikeTweet(tweetLink string, discordUserID string) error {
 	return nil
 }
 
-func UnlikeTweet(tweetLink string, discordUserID string) error {
+func UnlikeTweet(tweetLink string, user database.User) error {
 
-	user, err := database.GetUser(discordUserID)
-	if err != nil {
-		log.Warn(err)
-		return err
-	}
+	// user, err := database.GetUser(discordUserID)
+	// if err != nil {
+	// 	log.Warn(err)
+	// 	return err
+	// }
 
 	c, err := newOAuth1Client(user)
 	if err != nil {
@@ -129,13 +129,13 @@ func UnlikeTweet(tweetLink string, discordUserID string) error {
 	return nil
 }
 
-func RetweetTweet(tweetLink string, discordUserID string) error {
+func RetweetTweet(tweetLink string, user database.User) error {
 
-	user, err := database.GetUser(discordUserID)
-	if err != nil {
-		log.Warn(err)
-		return err
-	}
+	// user, err := database.GetUser(discordUserID)
+	// if err != nil {
+	// 	log.Warn(err)
+	// 	return err
+	// }
 
 	c, err := newOAuth1Client(user)
 	if err != nil {
@@ -159,13 +159,13 @@ func RetweetTweet(tweetLink string, discordUserID string) error {
 	return nil
 }
 
-func UnRetweetTweet(tweetLink string, discordUserID string) error {
+func UnRetweetTweet(tweetLink string, user database.User) error {
 
-	user, err := database.GetUser(discordUserID)
-	if err != nil {
-		log.Warn(err)
-		return err
-	}
+	// user, err := database.GetUser(discordUserID)
+	// if err != nil {
+	// 	log.Warn(err)
+	// 	return err
+	// }
 
 	c, err := newOAuth1Client(user)
 	if err != nil {
