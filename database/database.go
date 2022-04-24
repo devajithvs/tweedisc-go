@@ -2,7 +2,8 @@ package database
 
 import (
 	"context"
-	"path/filepath"
+	"os"
+	"regexp"
 	"tweedisc-go/config"
 
 	firebase "firebase.google.com/go"
@@ -15,8 +16,21 @@ var (
 	ok       error
 )
 
+const projectDirName = "tweedisc-go"
+
+func getPath(filename string) (path string, err error) {
+	projectName := regexp.MustCompile(`^(.*` + projectDirName + `)`)
+	currentWorkDirectory, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	rootPath := projectName.Find([]byte(currentWorkDirectory))
+
+	return string(rootPath) + "/" + filename, nil
+}
+
 func init() {
-	serviceAccountKeyFilePath, err := filepath.Abs("./serviceAccountKey.json")
+	serviceAccountKeyFilePath, err := getPath("serviceAccountKey.json")
 	if err != nil {
 		panic("Unable to load serviceAccountKeys.json file")
 	}

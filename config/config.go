@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"regexp"
 
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
@@ -30,18 +31,27 @@ var (
 	Period                int
 )
 
+const projectDirName = "tweedisc-go"
+
+func loadEnv() {
+	projectName := regexp.MustCompile(`^(.*` + projectDirName + `)`)
+	currentWorkDirectory, _ := os.Getwd()
+	rootPath := projectName.Find([]byte(currentWorkDirectory))
+
+	err := godotenv.Load(string(rootPath) + `/.env`)
+	log := Log
+	if err != nil {
+		log.Fatalf("Error loading .env file")
+	}
+}
+
 func init() {
 	var customFormatter = new(logrus.TextFormatter)
 	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
 	customFormatter.FullTimestamp = true
 	Log.SetFormatter(customFormatter)
 
-	log := Log
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-		return
-	}
+	loadEnv()
 
 	DatabaseURL = os.Getenv("DATABASE_URL")
 	Token = os.Getenv("TOKEN")

@@ -24,10 +24,10 @@ func GetTweetID(tweetLink string) string {
 
 	temp := 0
 	for _, chr := range text {
-		if chr > '0' || chr < '9' {
-			temp++
-		} else {
+		if chr < '0' || chr > '9' {
 			break
+		} else {
+			temp++
 		}
 	}
 	log.Println("Tweet ID: ", text[:temp])
