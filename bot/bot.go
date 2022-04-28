@@ -105,8 +105,8 @@ func sendTweetMessage(s *discordgo.Session, userID string, title string, tweetLi
 }
 
 func sendAuthLink(s *discordgo.Session, userID string, guildID string) error {
-	server, err := database.GetServer(guildID)
 	var loginURL string
+	server, err := database.GetServer(guildID)
 	if err != nil {
 		loginURL = config.GumroadURI
 	} else {
@@ -141,13 +141,13 @@ func reactionAddHandler(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
 	}
 
 	m, err := s.ChannelMessage(r.ChannelID, r.MessageID)
-	log.Println("Add reaction: ", m.Author.Username)
-
 	if err != nil {
 		s.MessageReactionRemove(r.ChannelID, r.MessageID, r.Emoji.Name, r.UserID)
 		log.Error("Error getting message: ", err)
 		return
 	}
+
+	log.Println("Add reaction: ", m.Author.Username)
 
 	action, exist := validReactions[r.Emoji.Name]
 	if !exist {
@@ -208,12 +208,11 @@ func reactionRemoveHandler(s *discordgo.Session, r *discordgo.MessageReactionRem
 	}
 
 	m, err := s.ChannelMessage(r.ChannelID, r.MessageID)
-	log.Println("Remove reaction: ", m.Author.Username)
-
 	if err != nil {
 		log.Error("Error getting message: ", err)
 		return
 	}
+	log.Println("Remove reaction: ", m.Author.Username)
 
 	action, exist := validReactions[r.Emoji.Name]
 	if !exist {
